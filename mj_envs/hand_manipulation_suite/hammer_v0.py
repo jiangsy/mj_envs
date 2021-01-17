@@ -1,15 +1,15 @@
 import numpy as np
 from gym import utils
 from mjrl.envs import mujoco_env
+import mujoco_py
 from mj_envs.utils.quatmath import *
 import os
 
-from .base_render_env import RenderEnv
-
 ADD_BONUS_REWARDS = True
+DEFAULT_SIZE = 128
 
 
-class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, RenderEnv):
+class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self):
         self.target_obj_sid = -1
         self.S_grasp_sid = -1
@@ -43,7 +43,9 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, RenderEnv):
         self.act_rng = 0.5 * (self.model.actuator_ctrlrange[:, 1] - self.model.actuator_ctrlrange[:, 0])
         self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:, 1])
         self.action_space.low = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:, 0])
-        RenderEnv.__init__(self)
+
+        self.viewer = None
+        self._viewers = {}
 
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
@@ -138,3 +140,56 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, RenderEnv):
                 num_success += 1
         success_percentage = num_success * 100.0 / num_paths
         return success_percentage
+
+    def render(self,
+               mode='human',
+               width=DEFAULT_SIZE,
+               height=DEFAULT_SIZE,
+               camera_id=None,
+               camera_name=None):
+        if mode == 'rgb_array' or mode == 'depth_array':
+            if camera_id is not None and camera_name is not None:
+                raise ValueError("Both `camera_id` and `camera_name` cannot be"
+                                 " specified at the same time.")
+
+            no_camera_specified = camera_name is None and camera_id is None
+            if no_camera_specified:
+                camera_name = 'track'
+
+            if camera_id is None and camera_name in self.model._camera_name2id:
+                camera_id = self.model.camera_name2id(camera_name)
+
+            self._get_viewer(mode).render(width, height, camera_id=camera_id)
+
+        if mode == 'rgb_array':
+            # window size used for old mujoco-py:
+            data = self._get_viewer(mode).read_pixels(width, height, depth=False)
+            # original image is upside-down, so flip it
+            return data[::-1, :, :]
+        elif mode == 'depth_array':
+            self._get_viewer(mode).render(width, height)
+            # window size used for old mujoco-py:
+            # Extract depth part of the read_pixels() tuple
+            data = self._get_viewer(mode).read_pixels(width, height, depth=True)[1]
+            # original image is upside-down, so flip it
+            return data[::-1, :]
+        elif mode == 'human':
+            self._get_viewer(mode).render()
+
+    def _get_viewer(self, mode):
+        self.viewer = self._viewers.get(mode)
+        if self.viewer is None:
+            if mode == 'human':
+                self.viewer = mujoco_py.MjViewer(self.sim)
+            elif mode == 'rgb_array' or mode == 'depth_array':
+                self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
+
+            self.mj_viewer_setup()
+            self._viewers[mode] = self.viewer
+        return self.viewer
+
+    def close(self):
+        if self.viewer is not None:
+            # self.viewer.finish()
+            self.viewer = None
+            self._viewers = {}
