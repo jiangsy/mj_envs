@@ -4,7 +4,7 @@ from mjrl.envs import mujoco_env
 import mujoco_py
 import os
 
-from base_render_env import RenderEnv
+from .base_render_env import RenderEnv
 
 
 ADD_BONUS_REWARDS = True

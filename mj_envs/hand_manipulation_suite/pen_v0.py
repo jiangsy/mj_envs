@@ -4,7 +4,7 @@ from mjrl.envs import mujoco_env
 from mj_envs.utils.quatmath import euler2quat
 import os
 
-from base_render_env import RenderEnv
+from .base_render_env import RenderEnv
 
 ADD_BONUS_REWARDS = True
 
