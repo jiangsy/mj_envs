@@ -1,13 +1,15 @@
 import numpy as np
 from gym import utils
 from mjrl.envs import mujoco_env
-from mujoco_py import MjViewer
 from mj_envs.utils.quatmath import *
 import os
 
+from base_render_env import RenderEnv
+
 ADD_BONUS_REWARDS = True
 
-class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
+
+class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, RenderEnv):
     def __init__(self):
         self.target_obj_sid = -1
         self.S_grasp_sid = -1
@@ -15,15 +17,23 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.tool_sid = -1
         self.goal_sid = -1
         curr_dir = os.path.dirname(os.path.abspath(__file__))
-        mujoco_env.MujocoEnv.__init__(self, curr_dir+'/assets/DAPG_hammer.xml', 5)
+        mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_hammer.xml', 5)
         utils.EzPickle.__init__(self)
 
         # change actuator sensitivity
-        self.sim.model.actuator_gainprm[self.sim.model.actuator_name2id('A_WRJ1'):self.sim.model.actuator_name2id('A_WRJ0')+1,:3] = np.array([10, 0, 0])
-        self.sim.model.actuator_gainprm[self.sim.model.actuator_name2id('A_FFJ3'):self.sim.model.actuator_name2id('A_THJ0')+1,:3] = np.array([1, 0, 0])
-        self.sim.model.actuator_biasprm[self.sim.model.actuator_name2id('A_WRJ1'):self.sim.model.actuator_name2id('A_WRJ0')+1,:3] = np.array([0, -10, 0])
-        self.sim.model.actuator_biasprm[self.sim.model.actuator_name2id('A_FFJ3'):self.sim.model.actuator_name2id('A_THJ0')+1,:3] = np.array([0, -1, 0])
-        
+        self.sim.model.actuator_gainprm[
+        self.sim.model.actuator_name2id('A_WRJ1'):self.sim.model.actuator_name2id('A_WRJ0') + 1, :3] = np.array(
+            [10, 0, 0])
+        self.sim.model.actuator_gainprm[
+        self.sim.model.actuator_name2id('A_FFJ3'):self.sim.model.actuator_name2id('A_THJ0') + 1, :3] = np.array(
+            [1, 0, 0])
+        self.sim.model.actuator_biasprm[
+        self.sim.model.actuator_name2id('A_WRJ1'):self.sim.model.actuator_name2id('A_WRJ0') + 1, :3] = np.array(
+            [0, -10, 0])
+        self.sim.model.actuator_biasprm[
+        self.sim.model.actuator_name2id('A_FFJ3'):self.sim.model.actuator_name2id('A_THJ0') + 1, :3] = np.array(
+            [0, -1, 0])
+
         self.target_obj_sid = self.sim.model.site_name2id('S_target')
         self.S_grasp_sid = self.sim.model.site_name2id('S_grasp')
         self.obj_bid = self.sim.model.body_name2id('Object')
@@ -31,8 +41,9 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.goal_sid = self.sim.model.site_name2id('nail_goal')
         self.act_mid = np.mean(self.model.actuator_ctrlrange, axis=1)
         self.act_rng = 0.5 * (self.model.actuator_ctrlrange[:, 1] - self.model.actuator_ctrlrange[:, 0])
-        self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:,1])
-        self.action_space.low  = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:,0])
+        self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:, 1])
+        self.action_space.low = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:, 0])
+        RenderEnv.__init__(self)
 
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
@@ -47,7 +58,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         tool_pos = self.data.site_xpos[self.tool_sid].ravel()
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         goal_pos = self.data.site_xpos[self.goal_sid].ravel()
-        
+
         # get to hammer
         reward = - 0.1 * np.linalg.norm(palm_pos - obj_pos)
         # take hammer head to nail
@@ -88,7 +99,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def reset_model(self):
         self.sim.reset()
         target_bid = self.model.body_name2id('nail_board')
-        self.model.body_pos[target_bid,2] = self.np_random.uniform(low=0.1, high=0.25)
+        self.model.body_pos[target_bid, 2] = self.np_random.uniform(low=0.1, high=0.25)
         self.sim.forward()
         return self.get_obs()
 
@@ -114,7 +125,6 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.sim.forward()
 
     def mj_viewer_setup(self):
-        self.viewer = MjViewer(self.sim)
         self.viewer.cam.azimuth = 45
         self.viewer.cam.distance = 2.0
         self.sim.forward()
@@ -126,5 +136,5 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         for path in paths:
             if np.sum(path['env_infos']['goal_achieved']) > 25:
                 num_success += 1
-        success_percentage = num_success*100.0/num_paths
+        success_percentage = num_success * 100.0 / num_paths
         return success_percentage
