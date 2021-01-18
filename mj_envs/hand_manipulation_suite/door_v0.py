@@ -1,7 +1,7 @@
 import numpy as np
 from gym import utils
 from mjrl.envs import mujoco_env
-import  mujoco_py
+import mujoco_py
 import os
 
 

@@ -3,6 +3,8 @@ from gym import utils
 from mjrl.envs import mujoco_env
 import mujoco_py
 import os
+from mjrl.utils.gym_env import GymEnv
+
 
 ADD_BONUS_REWARDS = True
 DEFAULT_SIZE = 128
