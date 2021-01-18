@@ -10,7 +10,7 @@ DEFAULT_SIZE = 128
 
 
 class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, use_full_state=False):
         self.target_obj_bid = 0
         self.S_grasp_sid = 0
         self.eps_ball_sid = 0
@@ -22,6 +22,10 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.pen_length = 1.0
         self.tar_length = 1.0
 
+        if use_full_state:
+            self._get_obs = self.get_env_flat_state
+        else:
+            self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_pen.xml', 5)
 
@@ -97,7 +101,7 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
         goal_achieved = True if (dist < 0.075 and orien_similarity > 0.95) else False
 
-        return self.get_obs(), reward, done, dict(goal_achieved=goal_achieved)
+        return self._get_obs(), reward, done, dict(goal_achieved=goal_achieved)
 
     def get_obs(self):
         qp = self.data.qpos.ravel()
@@ -118,7 +122,7 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         desired_orien[1] = self.np_random.uniform(low=-1, high=1)
         self.model.body_quat[self.target_obj_bid] = euler2quat(desired_orien)
         self.sim.forward()
-        return self.get_obs()
+        return self._get_obs()
 
     def get_env_state(self):
         """
@@ -128,6 +132,12 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qv = self.data.qvel.ravel().copy()
         desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
         return dict(qpos=qp, qvel=qv, desired_orien=desired_orien)
+
+    def get_env_flat_state(self):
+        qp = self.data.qpos.ravel().copy()
+        qv = self.data.qvel.ravel().copy()
+        desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
+        return np.concatenate([qp, qv, desired_orien])
 
     def set_env_state(self, state_dict):
         """

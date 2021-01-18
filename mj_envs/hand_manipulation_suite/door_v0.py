@@ -10,11 +10,16 @@ DEFAULT_SIZE = 128
 
 
 class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, use_full_state=False):
         self.door_hinge_did = 0
         self.door_bid = 0
         self.grasp_sid = 0
         self.handle_sid = 0
+
+        if use_full_state:
+            self._get_obs = self.get_env_flat_state
+        else:
+            self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_door.xml', 5)
 
@@ -53,7 +58,7 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         except:
             a = a  # only for the initialization phase
         self.do_simulation(a, self.frame_skip)
-        ob = self.get_obs()
+        ob = self._get_obs()
         handle_pos = self.data.site_xpos[self.handle_sid].ravel()
         palm_pos = self.data.site_xpos[self.grasp_sid].ravel()
         door_pos = self.data.qpos[self.door_hinge_did]
@@ -103,7 +108,7 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.model.body_pos[self.door_bid, 1] = self.np_random.uniform(low=0.25, high=0.35)
         self.model.body_pos[self.door_bid, 2] = self.np_random.uniform(low=0.252, high=0.35)
         self.sim.forward()
-        return self.get_obs()
+        return self._get_obs()
 
     def get_env_state(self):
         """
@@ -113,6 +118,12 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qv = self.data.qvel.ravel().copy()
         door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
         return dict(qpos=qp, qvel=qv, door_body_pos=door_body_pos)
+    
+    def get_env_flat_state(self):
+        qp = self.data.qpos.ravel().copy()
+        qv = self.data.qvel.ravel().copy()
+        door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
+        return np.concatenate([qp, qv, door_body_pos])
 
     def set_env_state(self, state_dict):
         """

@@ -10,12 +10,17 @@ DEFAULT_SIZE = 128
 
 
 class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, use_full_state=False):
         self.target_obj_sid = -1
         self.S_grasp_sid = -1
         self.obj_bid = -1
         self.tool_sid = -1
         self.goal_sid = -1
+
+        if use_full_state:
+            self._get_obs = self.get_env_flat_state
+        else:
+            self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_hammer.xml', 5)
         utils.EzPickle.__init__(self)
@@ -47,6 +52,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.viewer = None
         self._viewers = {}
 
+
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
         try:
@@ -54,7 +60,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         except:
             a = a  # only for the initialization phase
         self.do_simulation(a, self.frame_skip)
-        ob = self.get_obs()
+        ob = self._get_obs()
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
         tool_pos = self.data.site_xpos[self.tool_sid].ravel()
@@ -103,7 +109,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_bid = self.model.body_name2id('nail_board')
         self.model.body_pos[target_bid, 2] = self.np_random.uniform(low=0.1, high=0.25)
         self.sim.forward()
-        return self.get_obs()
+        return self._get_obs()
 
     def get_env_state(self):
         """
@@ -125,6 +131,13 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.set_state(qp, qv)
         self.model.body_pos[self.model.body_name2id('nail_board')] = board_pos
         self.sim.forward()
+
+    def get_env_flat_state(self):
+        qpos = self.data.qpos.ravel().copy()
+        qvel = self.data.qvel.ravel().copy()
+        board_pos = self.model.body_pos[self.model.body_name2id('nail_board')].copy()
+        target_pos = self.data.site_xpos[self.target_obj_sid].ravel().copy()
+        return np.concatenate([qpos, qvel, board_pos, target_pos])
 
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 45

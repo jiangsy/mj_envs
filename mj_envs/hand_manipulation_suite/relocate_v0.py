@@ -2,7 +2,6 @@ import numpy as np
 from gym import utils
 from mjrl.envs import mujoco_env
 import mujoco_py
-from mujoco_py import MjViewer
 import os
 
 ADD_BONUS_REWARDS = True
@@ -10,10 +9,15 @@ DEFAULT_SIZE = 128
 
 
 class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self):
+    def __init__(self, use_full_state=False):
         self.target_obj_sid = 0
         self.S_grasp_sid = 0
         self.obj_bid = 0
+
+        if use_full_state:
+            self._get_obs = self.get_env_flat_state
+        else:
+            self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_relocate.xml', 5)
 
@@ -42,6 +46,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.viewer = None
         self._viewers = {}
+
 
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
@@ -105,6 +110,18 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, target_pos=target_pos, palm_pos=palm_pos,
                     qpos=qp, qvel=qv)
+
+    def get_env_flat_state(self):
+        """
+        Get state of hand as well as objects and targets in the scene
+        """
+        qp = self.data.qpos.ravel().copy()
+        qv = self.data.qvel.ravel().copy()
+        hand_qpos = qp[:30]
+        obj_pos = self.data.body_xpos[self.obj_bid].ravel()
+        palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
+        target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
+        return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos])
 
     def set_env_state(self, state_dict):
         """
