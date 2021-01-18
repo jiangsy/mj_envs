@@ -163,7 +163,7 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
             no_camera_specified = camera_name is None and camera_id is None
             if no_camera_specified:
-                camera_name = 'track'
+                camera_name = 'fixed'
 
             if camera_id is None and camera_name in self.model._camera_name2id:
                 camera_id = self.model.camera_name2id(camera_name)
