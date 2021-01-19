@@ -113,6 +113,19 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, target_pos=target_pos, palm_pos=palm_pos,
                     qpos=qp, qvel=qv)
 
+    def set_env_state(self, state_dict):
+        """
+        Set the state which includes hand as well as objects and targets in the scene
+        """
+        qp = state_dict['qpos']
+        qv = state_dict['qvel']
+        obj_pos = state_dict['obj_pos']
+        target_pos = state_dict['target_pos']
+        self.set_state(qp, qv)
+        self.model.body_pos[self.obj_bid] = obj_pos
+        self.model.site_pos[self.target_obj_sid] = target_pos
+        self.sim.forward()
+
     def get_env_flat_state(self):
         """
         Get state of hand as well as objects and targets in the scene
@@ -125,14 +138,11 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos])
 
-    def set_env_state(self, state_dict):
-        """
-        Set the state which includes hand as well as objects and targets in the scene
-        """
-        qp = state_dict['qpos']
-        qv = state_dict['qvel']
-        obj_pos = state_dict['obj_pos']
-        target_pos = state_dict['target_pos']
+    def set_env_flat_state(self, state):
+        qp = state[:36]
+        qv = state[36:72]
+        obj_pos = state[102:105]
+        target_pos = state[108:]
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid] = obj_pos
         self.model.site_pos[self.target_obj_sid] = target_pos
@@ -206,3 +216,6 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             self.viewer = None
             self._viewers = {}
 
+if __name__ == '__main__':
+    env = RelocateEnvV0(True)
+    env.get_env_flat_state()

@@ -133,12 +133,6 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
         return dict(qpos=qp, qvel=qv, desired_orien=desired_orien)
 
-    def get_env_flat_state(self):
-        qp = self.data.qpos.ravel().copy()
-        qv = self.data.qvel.ravel().copy()
-        desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
-        return np.concatenate([qp, qv, desired_orien])
-
     def set_env_state(self, state_dict):
         """
         Set the state which includes hand as well as objects and targets in the scene
@@ -146,6 +140,20 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qp = state_dict['qpos']
         qv = state_dict['qvel']
         desired_orien = state_dict['desired_orien']
+        self.set_state(qp, qv)
+        self.model.body_quat[self.target_obj_bid] = desired_orien
+        self.sim.forward()
+
+    def get_env_flat_state(self):
+        qp = self.data.qpos.ravel().copy()
+        qv = self.data.qvel.ravel().copy()
+        desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
+        return np.concatenate([qp, qv, desired_orien])
+
+    def set_env_flat_state(self, state):
+        qp = state[:30].copy()
+        qv = state[30:60].copy()
+        desired_orien = state[60:].copy()
         self.set_state(qp, qv)
         self.model.body_quat[self.target_obj_bid] = desired_orien
         self.sim.forward()
@@ -217,4 +225,3 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
-

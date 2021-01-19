@@ -118,12 +118,6 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qv = self.data.qvel.ravel().copy()
         door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
         return dict(qpos=qp, qvel=qv, door_body_pos=door_body_pos)
-    
-    def get_env_flat_state(self):
-        qp = self.data.qpos.ravel().copy()
-        qv = self.data.qvel.ravel().copy()
-        door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
-        return np.concatenate([qp, qv, door_body_pos])
 
     def set_env_state(self, state_dict):
         """
@@ -133,6 +127,21 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qv = state_dict['qvel']
         self.set_state(qp, qv)
         self.model.body_pos[self.door_bid] = state_dict['door_body_pos']
+        self.sim.forward()
+
+    def get_env_flat_state(self):
+        qp = self.data.qpos.ravel().copy()
+        qv = self.data.qvel.ravel().copy()
+        door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
+        return np.concatenate([qp, qv, door_body_pos])
+
+    def set_env_flat_state(self, state):
+        # use hard coded dim here
+        qp = state[:30].copy()
+        qv = state[30:60].copy()
+        self.set_state(qp, qv)
+        door_body_pos = state[60:]
+        self.model.body_pos[self.door_bid] = door_body_pos.copy()
         self.sim.forward()
 
     def mj_viewer_setup(self):
@@ -202,3 +211,4 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
+

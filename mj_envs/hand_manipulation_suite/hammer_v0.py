@@ -138,6 +138,14 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel().copy()
         return np.concatenate([qpos, qvel, board_pos, target_pos])
 
+    def set_env_flat_state(self, state):
+        qp = state[:33].copy()
+        qv = state[33:66].copy()
+        board_pos = state[66:69].copy()
+        self.set_state(qp, qv)
+        self.model.body_pos[self.model.body_name2id('nail_board')] = board_pos
+        self.sim.forward()
+
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 45
         self.viewer.cam.distance = 2.0
@@ -205,3 +213,4 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
+
