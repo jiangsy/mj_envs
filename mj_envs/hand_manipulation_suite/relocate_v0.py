@@ -5,6 +5,8 @@ import mujoco_py
 import os
 from mjrl.utils.gym_env import GymEnv
 
+from gym.envs.mujoco import MujocoEnv
+
 
 ADD_BONUS_REWARDS = True
 DEFAULT_SIZE = 128
@@ -57,7 +59,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         except:
             a = a  # only for the initialization phase
         self.do_simulation(a, self.frame_skip)
-        ob = self.get_obs()
+        ob = self._get_obs()
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
@@ -98,7 +100,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.model.site_pos[self.target_obj_sid, 1] = self.np_random.uniform(low=-0.2, high=0.2)
         self.model.site_pos[self.target_obj_sid, 2] = self.np_random.uniform(low=0.15, high=0.35)
         self.sim.forward()
-        return self.get_obs()
+        return self._get_obs()
 
     def get_env_state(self):
         """
