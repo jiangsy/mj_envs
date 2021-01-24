@@ -3,9 +3,6 @@ from gym import utils
 from mjrl.envs import mujoco_env
 import mujoco_py
 import os
-from mjrl.utils.gym_env import GymEnv
-
-from gym.envs.mujoco import MujocoEnv
 
 
 ADD_BONUS_REWARDS = True
