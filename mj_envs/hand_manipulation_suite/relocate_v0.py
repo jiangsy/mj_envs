@@ -90,6 +90,13 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
 
+    def state_to_obs(self, state):
+        qp = state[:36]
+        obj_pos = state[102:105]
+        palm_pos = state[105:108]
+        target_pos = state[108:]
+        return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
+
     def reset_model(self):
         qp = self.init_qpos.copy()
         qv = self.init_qvel.copy()
@@ -121,12 +128,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         """
         qp = state_dict['qpos']
         qv = state_dict['qvel']
-        obj_pos = state_dict['obj_pos']
-        target_pos = state_dict['target_pos']
         self.set_state(qp, qv)
-        self.model.body_pos[self.obj_bid] = obj_pos
-        self.model.site_pos[self.target_obj_sid] = target_pos
-        self.sim.forward()
 
     def get_env_flat_state(self):
         """
@@ -143,12 +145,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def set_env_flat_state(self, state):
         qp = state[:36]
         qv = state[36:72]
-        obj_pos = state[102:105]
-        target_pos = state[108:]
         self.set_state(qp, qv)
-        self.model.body_pos[self.obj_bid] = obj_pos
-        self.model.site_pos[self.target_obj_sid] = target_pos
-        self.sim.forward()
 
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 90
