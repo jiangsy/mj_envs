@@ -151,6 +151,9 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.model.body_pos[self.model.body_name2id('nail_board')] = board_pos
         self.sim.forward()
 
+    def set_env_full_state(self, full_state):
+        self.set_env_state(full_state[:72])
+
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 45
         self.viewer.cam.distance = 2.0

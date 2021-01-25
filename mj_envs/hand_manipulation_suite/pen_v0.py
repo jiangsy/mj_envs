@@ -135,7 +135,7 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
     def full_state_to_state(self, full_states):
         assert full_states.ndim == 2
-        return full_states[:, :63]
+        return full_states[:, :64]
 
     def full_state_to_obs(self, full_states):
         assert full_states.ndim == 2
@@ -157,10 +157,13 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def set_env_state(self, state):
         qp = state[:30].copy()
         qv = state[30:60].copy()
-        desired_orien = state[60:].copy()
+        desired_orien = state[60:64].copy()
         self.set_state(qp, qv)
         self.model.body_quat[self.target_obj_bid] = desired_orien
         self.sim.forward()
+
+    def set_env_full_state(self, full_state):
+        self.set_env_state(full_state[:64])
 
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = -45

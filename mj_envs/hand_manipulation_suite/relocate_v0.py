@@ -130,6 +130,9 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qv = state[36:72]
         self.set_state(qp, qv)
 
+    def set_env_full_state(self, full_state):
+        self.set_env_state(full_state[:72])
+
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 90
         self.sim.forward()

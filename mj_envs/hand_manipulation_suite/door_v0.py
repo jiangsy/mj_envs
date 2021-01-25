@@ -148,6 +148,9 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.model.body_pos[self.door_bid] = door_body_pos.copy()
         self.sim.forward()
 
+    def set_env_full_state(self, state):
+        self.set_env_state(state[:63])
+
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 90
         self.sim.forward()
