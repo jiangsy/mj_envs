@@ -23,7 +23,7 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.tar_length = 1.0
 
         if use_full_state:
-            self._get_obs = self.get_env_flat_state
+            self._get_obs = self.get_env_full_state
         else:
             self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -124,33 +124,35 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.sim.forward()
         return self._get_obs()
 
-    def get_env_state(self):
-        """
-        Get state of hand as well as objects and targets in the scene
-        """
+    def get_env_full_state(self):
         qp = self.data.qpos.ravel().copy()
         qv = self.data.qvel.ravel().copy()
+        obj_pos = self.data.body_xpos[self.obj_bid].ravel()
+        desired_pos = self.data.site_xpos[self.eps_ball_sid].ravel()
+        obj_orien = (self.data.site_xpos[self.obj_t_sid] - self.data.site_xpos[self.obj_b_sid]) / self.pen_length
         desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
-        return dict(qpos=qp, qvel=qv, desired_orien=desired_orien)
+        return np.concatenate([qp, qv, desired_orien, obj_pos, desired_pos, obj_orien])
 
-    def set_env_state(self, state_dict):
-        """
-        Set the state which includes hand as well as objects and targets in the scene
-        """
-        qp = state_dict['qpos']
-        qv = state_dict['qvel']
-        desired_orien = state_dict['desired_orien']
-        self.set_state(qp, qv)
-        self.model.body_quat[self.target_obj_bid] = desired_orien
-        self.sim.forward()
+    def full_state_to_state(self, full_state):
+        return full_state[:63]
 
-    def get_env_flat_state(self):
+    def full_state_to_obs(self, full_state):
+        qp = full_state[:30]
+        obj_vel = full_state[54:60]
+        desired_orien = full_state[60:64]
+        obj_pos = full_state[64:67]
+        desired_pos = full_state[67:70]
+        obj_orien = full_state[70:73]
+        return np.concatenate([qp[:-6], obj_pos, obj_vel, obj_orien, desired_orien,
+                               obj_pos - desired_pos, obj_orien - desired_orien])
+
+    def get_env_state(self):
         qp = self.data.qpos.ravel().copy()
         qv = self.data.qvel.ravel().copy()
         desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
         return np.concatenate([qp, qv, desired_orien])
 
-    def set_env_flat_state(self, state):
+    def set_env_state(self, state):
         qp = state[:30].copy()
         qv = state[30:60].copy()
         desired_orien = state[60:].copy()

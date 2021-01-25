@@ -10,14 +10,14 @@ DEFAULT_SIZE = 128
 
 
 class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
-    def __init__(self, use_full_state=False):
+    def __init__(self, use_full_state=True):
         self.door_hinge_did = 0
         self.door_bid = 0
         self.grasp_sid = 0
         self.handle_sid = 0
 
         if use_full_state:
-            self._get_obs = self.get_env_flat_state
+            self._get_obs = self.get_env_full_state
         else:
             self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -110,33 +110,38 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.sim.forward()
         return self._get_obs()
 
-    def get_env_state(self):
-        """
-        Get state of hand as well as objects and targets in the scene
-        """
+    def get_env_full_state(self):
         qp = self.data.qpos.ravel().copy()
         qv = self.data.qvel.ravel().copy()
         door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
-        return dict(qpos=qp, qvel=qv, door_body_pos=door_body_pos)
+        handle_pos = self.data.site_xpos[self.handle_sid].ravel()
+        palm_pos = self.data.site_xpos[self.grasp_sid].ravel()
+        door_pos = np.array([self.data.qpos[self.door_hinge_did]])
+        return np.concatenate([qp, qv, door_body_pos, handle_pos, palm_pos, door_pos])
 
-    def set_env_state(self, state_dict):
-        """
-        Set the state which includes hand as well as objects and targets in the scene
-        """
-        qp = state_dict['qpos']
-        qv = state_dict['qvel']
-        self.set_state(qp, qv)
-        self.model.body_pos[self.door_bid] = state_dict['door_body_pos']
-        self.sim.forward()
+    def full_state_to_state(self, full_state):
+        return full_state[:63]
 
-    def get_env_flat_state(self):
+    def full_state_to_obs(self, full_state):
+        qp = full_state[:30]
+        handle_pos = full_state[63:66]
+        palm_pos = full_state[66:69]
+        door_pos = full_state[69:70]
+        if door_pos > 1.0:
+            door_open = 1.0
+        else:
+            door_open = -1.0
+        latch_pos = qp[-1]
+        return np.concatenate(
+            [qp[1:-2], [latch_pos], door_pos, palm_pos, handle_pos, palm_pos - handle_pos, [door_open]])
+
+    def get_env_state(self):
         qp = self.data.qpos.ravel().copy()
         qv = self.data.qvel.ravel().copy()
         door_body_pos = self.model.body_pos[self.door_bid].ravel().copy()
         return np.concatenate([qp, qv, door_body_pos])
 
-    def set_env_flat_state(self, state):
-        # use hard coded dim here
+    def set_env_state(self, state):
         qp = state[:30].copy()
         qv = state[30:60].copy()
         self.set_state(qp, qv)

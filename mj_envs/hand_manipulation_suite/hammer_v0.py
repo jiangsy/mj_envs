@@ -17,7 +17,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.goal_sid = -1
 
         if use_full_state:
-            self._get_obs = self.get_env_flat_state
+            self._get_obs = self.get_env_full_state
         else:
             self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -110,35 +110,38 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.sim.forward()
         return self._get_obs()
 
-    def get_env_state(self):
-        """
-        Get state of hand as well as objects and targets in the scene
-        """
+    def get_env_full_state(self):
         qpos = self.data.qpos.ravel().copy()
         qvel = self.data.qvel.ravel().copy()
         board_pos = self.model.body_pos[self.model.body_name2id('nail_board')].copy()
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel().copy()
-        return dict(qpos=qpos, qvel=qvel, board_pos=board_pos, target_pos=target_pos)
+        obj_pos = self.data.body_xpos[self.obj_bid].ravel()
+        obj_rot = quat2euler(self.data.body_xquat[self.obj_bid].ravel()).ravel()
+        palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
+        nail_impact = np.clip(self.sim.data.sensordata[self.sim.model.sensor_name2id('S_nail')], -1.0, 1.0)
+        return np.concatenate([qpos, qvel, board_pos, target_pos, palm_pos, obj_pos, obj_rot, np.array([nail_impact])])
 
-    def set_env_state(self, state_dict):
-        """
-        Set the state which includes hand as well as objects and targets in the scene
-        """
-        qp = state_dict['qpos']
-        qv = state_dict['qvel']
-        board_pos = state_dict['board_pos']
-        self.set_state(qp, qv)
-        self.model.body_pos[self.model.body_name2id('nail_board')] = board_pos
-        self.sim.forward()
+    def full_state_to_state(self, full_state):
+        qpos = full_state[:33]
+        qvel = full_state[33:66]
+        target_pos = full_state[69:72]
+        palm_pos = full_state[72:75]
+        obj_pos = full_state[75:78]
+        obj_rot = full_state[78:81]
+        nail_impact = full_state[81:82]
+        return np.concatenate([qpos[:-6], qvel[-6:], palm_pos, obj_pos, obj_rot, target_pos, np.array([nail_impact])])
 
-    def get_env_flat_state(self):
+    def full_state_to_obs(self, full_state):
+        return full_state[:72]
+
+    def get_env_state(self):
         qpos = self.data.qpos.ravel().copy()
         qvel = self.data.qvel.ravel().copy()
         board_pos = self.model.body_pos[self.model.body_name2id('nail_board')].copy()
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel().copy()
         return np.concatenate([qpos, qvel, board_pos, target_pos])
 
-    def set_env_flat_state(self, state):
+    def set_env_state(self, state):
         qp = state[:33].copy()
         qv = state[33:66].copy()
         board_pos = state[66:69].copy()

@@ -16,7 +16,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.obj_bid = 0
 
         if use_full_state:
-            self._get_obs = self.get_env_flat_state
+            self._get_obs = self.get_env_full_state
         else:
             self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +47,6 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.viewer = None
         self._viewers = {}
-
 
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
@@ -87,13 +86,6 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
 
-    def state_to_obs(self, state):
-        qp = state[:36]
-        obj_pos = state[102:105]
-        palm_pos = state[105:108]
-        target_pos = state[108:]
-        return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
-
     def reset_model(self):
         qp = self.init_qpos.copy()
         qv = self.init_qvel.copy()
@@ -106,28 +98,20 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.sim.forward()
         return self._get_obs()
 
+    def get_env_full_state(self):
+        return self.get_env_state()
+
+    def full_state_to_state(self, full_state):
+        return full_state
+
+    def full_state_to_obs(self, full_state):
+        qp = full_state[:36]
+        obj_pos = full_state[102:105]
+        palm_pos = full_state[105:108]
+        target_pos = full_state[108:]
+        return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
+
     def get_env_state(self):
-        """
-        Get state of hand as well as objects and targets in the scene
-        """
-        qp = self.data.qpos.ravel().copy()
-        qv = self.data.qvel.ravel().copy()
-        hand_qpos = qp[:30]
-        obj_pos = self.data.body_xpos[self.obj_bid].ravel()
-        palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
-        target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
-        return dict(hand_qpos=hand_qpos, obj_pos=obj_pos, target_pos=target_pos, palm_pos=palm_pos,
-                    qpos=qp, qvel=qv)
-
-    def set_env_state(self, state_dict):
-        """
-        Set the state which includes hand as well as objects and targets in the scene
-        """
-        qp = state_dict['qpos']
-        qv = state_dict['qvel']
-        self.set_state(qp, qv)
-
-    def get_env_flat_state(self):
         """
         Get state of hand as well as objects and targets in the scene
         """
@@ -139,7 +123,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
         return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos])
 
-    def set_env_flat_state(self, state):
+    def set_env_state(self, state):
         qp = state[:36]
         qv = state[36:72]
         self.set_state(qp, qv)
@@ -211,7 +195,3 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
-
-if __name__ == '__main__':
-    env = RelocateEnvV0(True)
-    env.get_env_flat_state()
