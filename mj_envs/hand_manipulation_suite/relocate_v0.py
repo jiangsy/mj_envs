@@ -101,15 +101,17 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def get_env_full_state(self):
         return self.get_env_state()
 
-    def full_state_to_state(self, full_state):
-        return full_state
+    def full_state_to_state(self, full_states):
+        assert full_states.ndim == 2
+        return full_states
 
-    def full_state_to_obs(self, full_state):
-        qp = full_state[:36]
-        obj_pos = full_state[102:105]
-        palm_pos = full_state[105:108]
-        target_pos = full_state[108:]
-        return np.concatenate([qp[:-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos])
+    def full_state_to_obs(self, full_states):
+        assert full_states.ndim == 2
+        qp = full_states[:, :36]
+        obj_pos = full_states[:, 102:105]
+        palm_pos = full_states[:, 105:108]
+        target_pos = full_states[:, 108:]
+        return np.concatenate([qp[:, :-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos], axis=-1)
 
     def get_env_state(self):
         """

@@ -1,8 +1,9 @@
+import os
+
 from gym import utils
+from mj_envs.utils.quatmath import *
 from mjrl.envs import mujoco_env
 import mujoco_py
-from mj_envs.utils.quatmath import *
-import os
 
 ADD_BONUS_REWARDS = True
 DEFAULT_SIZE = 128
@@ -50,7 +51,6 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
 
         self.viewer = None
         self._viewers = {}
-
 
     def step(self, a):
         a = np.clip(a, -1.0, 1.0)
@@ -121,18 +121,20 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         nail_impact = np.clip(self.sim.data.sensordata[self.sim.model.sensor_name2id('S_nail')], -1.0, 1.0)
         return np.concatenate([qpos, qvel, board_pos, target_pos, palm_pos, obj_pos, obj_rot, np.array([nail_impact])])
 
-    def full_state_to_state(self, full_state):
-        qpos = full_state[:33]
-        qvel = full_state[33:66]
-        target_pos = full_state[69:72]
-        palm_pos = full_state[72:75]
-        obj_pos = full_state[75:78]
-        obj_rot = full_state[78:81]
-        nail_impact = full_state[81:82]
-        return np.concatenate([qpos[:-6], qvel[-6:], palm_pos, obj_pos, obj_rot, target_pos, np.array([nail_impact])])
+    def full_state_to_obs(self, full_states: np.ndarray):
+        assert full_states.ndim == 2
+        qpos = full_states[:, :33]
+        qvel = full_states[:, 33:66]
+        target_pos = full_states[:, 69:72]
+        palm_pos = full_states[:, 72:75]
+        obj_pos = full_states[:, 75:78]
+        obj_rot = full_states[:, 78:81]
+        nail_impact = full_states[:, 81:82]
+        return np.concatenate([qpos[:, -6], qvel[:, -6:], palm_pos, obj_pos, obj_rot, target_pos, nail_impact], axis=-1)
 
-    def full_state_to_obs(self, full_state):
-        return full_state[:72]
+    def full_state_to_state(self, full_states: np.ndarray):
+        assert full_states.ndim == 2
+        return full_states[:, :72]
 
     def get_env_state(self):
         qpos = self.data.qpos.ravel().copy()

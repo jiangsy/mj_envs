@@ -119,21 +119,20 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         door_pos = np.array([self.data.qpos[self.door_hinge_did]])
         return np.concatenate([qp, qv, door_body_pos, handle_pos, palm_pos, door_pos])
 
-    def full_state_to_state(self, full_state):
-        return full_state[:63]
+    def full_state_to_state(self, full_states):
+        assert full_states.ndim == 2
+        return full_states[:, :63]
 
-    def full_state_to_obs(self, full_state):
-        qp = full_state[:30]
-        handle_pos = full_state[63:66]
-        palm_pos = full_state[66:69]
-        door_pos = full_state[69:70]
-        if door_pos > 1.0:
-            door_open = 1.0
-        else:
-            door_open = -1.0
-        latch_pos = qp[-1]
+    def full_state_to_obs(self, full_states):
+        assert full_states.ndim == 2
+        qp = full_states[:, :30]
+        handle_pos = full_states[:, 63:66]
+        palm_pos = full_states[:, 66:69]
+        door_pos = full_states[:, 69:70]
+        door_open = np.where(door_pos > 1.0, 1.0, -1.0)
+        latch_pos = qp[:, -1:]
         return np.concatenate(
-            [qp[1:-2], [latch_pos], door_pos, palm_pos, handle_pos, palm_pos - handle_pos, [door_open]])
+            [qp[:, 1:-2], latch_pos, door_pos, palm_pos, handle_pos, palm_pos - handle_pos, door_open], axis=-1)
 
     def get_env_state(self):
         qp = self.data.qpos.ravel().copy()
