@@ -1,8 +1,9 @@
-import numpy as np
-from gym import utils
+import os
+
+from gym import utils, spaces
 from mjrl.envs import mujoco_env
 import mujoco_py
-import os
+import numpy as np
 
 
 ADD_BONUS_REWARDS = True
@@ -47,6 +48,23 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.grasp_sid = self.model.site_name2id('S_grasp')
         self.handle_sid = self.model.site_name2id('S_handle')
         self.door_bid = self.model.body_name2id('frame')
+
+        obs = self.get_obs()
+        state = self.get_env_state()
+        full_state = self.get_env_full_state()
+        self.obs_dim = obs.size
+        self.state_dim = state.size
+        self.full_state_dim = full_state.ndim
+
+        obs_high = np.inf * np.ones(self.obs_dim)
+        obs_low = -obs_high
+        self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
+        state_high = np.inf * np.ones(self.state_dim)
+        state_low = -state_high
+        self.state_space = spaces.Box(state_low, state_high, dtype=np.float32)
+        full_state_high = np.inf * np.ones(self.full_state_dim)
+        full_state_low = -full_state_high
+        self.full_state_space = spaces.Box(full_state_low, full_state_high, dtype=np.float32)
 
         self.viewer = None
         self._viewers = {}

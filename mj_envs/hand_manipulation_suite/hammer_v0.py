@@ -1,6 +1,6 @@
 import os
 
-from gym import utils
+from gym import utils, spaces
 from mj_envs.utils.quatmath import *
 from mjrl.envs import mujoco_env
 import mujoco_py
@@ -48,6 +48,23 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.act_rng = 0.5 * (self.model.actuator_ctrlrange[:, 1] - self.model.actuator_ctrlrange[:, 0])
         self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:, 1])
         self.action_space.low = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:, 0])
+
+        obs = self.get_obs()
+        state = self.get_env_state()
+        full_state = self.get_env_full_state()
+        self.obs_dim = obs.size
+        self.state_dim = state.size
+        self.full_state_dim = full_state.ndim
+
+        obs_high = np.inf * np.ones(self.obs_dim)
+        obs_low = -obs_high
+        self.observation_space = spaces.Box(obs_low, obs_high, dtype=np.float32)
+        state_high = np.inf * np.ones(self.state_dim)
+        state_low = -state_high
+        self.state_space = spaces.Box(state_low, state_high, dtype=np.float32)
+        full_state_high = np.inf * np.ones(self.full_state_dim)
+        full_state_low = -full_state_high
+        self.full_state_space = spaces.Box(full_state_low, full_state_high, dtype=np.float32)
 
         self.viewer = None
         self._viewers = {}
