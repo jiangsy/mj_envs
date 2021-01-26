@@ -45,6 +45,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.act_rng = 0.5 * (self.model.actuator_ctrlrange[:, 1] - self.model.actuator_ctrlrange[:, 0])
         self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:, 1])
         self.action_space.low = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:, 0])
+        self.target_pos = np.zeros(3)
 
         obs = self.get_obs()
         state = self.get_env_state()
@@ -110,9 +111,9 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid, 0] = self.np_random.uniform(low=-0.15, high=0.15)
         self.model.body_pos[self.obj_bid, 1] = self.np_random.uniform(low=-0.15, high=0.3)
-        self.model.site_pos[self.target_obj_sid, 0] = self.np_random.uniform(low=-0.2, high=0.2)
-        self.model.site_pos[self.target_obj_sid, 1] = self.np_random.uniform(low=-0.2, high=0.2)
-        self.model.site_pos[self.target_obj_sid, 2] = self.np_random.uniform(low=0.15, high=0.35)
+        self.target_pos[0] = self.np_random.uniform(low=-0.2, high=0.2)
+        self.target_pos[1] = self.np_random.uniform(low=-0.2, high=0.2)
+        self.target_pos[2] = self.np_random.uniform(low=0.15, high=0.35)
         self.sim.forward()
         return self._get_obs()
 
@@ -140,12 +141,13 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         hand_qpos = qp[:30]
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
-        target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
+        target_pos = self.target_pos.ravel()
         return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos])
 
     def set_env_state(self, state):
         qp = state[:36]
         qv = state[36:72]
+        self.target_pos = state[108:]
         self.set_state(qp, qv)
 
     def set_env_full_state(self, full_state):
@@ -218,3 +220,14 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
+
+
+if __name__ == '__main__':
+    env = RelocateEnvV0()
+    env.reset()
+    for _ in range(1000):
+        print(env.data.site_xpos[env.target_obj_sid].ravel())
+        _, _, done, _ = env.step(env.action_space.sample())
+        if done:
+            env.reset()
+            print('\n')
