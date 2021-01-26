@@ -15,6 +15,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.target_obj_sid = 0
         self.S_grasp_sid = 0
         self.obj_bid = 0
+        self.target_pos = np.zeros(3)
 
         if use_full_state:
             self._get_obs = self.get_env_full_state
@@ -45,7 +46,6 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.act_rng = 0.5 * (self.model.actuator_ctrlrange[:, 1] - self.model.actuator_ctrlrange[:, 0])
         self.action_space.high = np.ones_like(self.model.actuator_ctrlrange[:, 1])
         self.action_space.low = -1.0 * np.ones_like(self.model.actuator_ctrlrange[:, 0])
-        self.target_pos = np.zeros(3)
 
         obs = self.get_obs()
         state = self.get_env_state()
@@ -77,7 +77,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         ob = self._get_obs()
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
-        target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
+        target_pos = self.target_pos.ravel()
 
         reward = -0.1 * np.linalg.norm(palm_pos - obj_pos)  # take hand to object
         if obj_pos[2] > 0.04:  # if object off the table
@@ -220,14 +220,3 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
             # self.viewer.finish()
             self.viewer = None
             self._viewers = {}
-
-
-if __name__ == '__main__':
-    env = RelocateEnvV0()
-    env.reset()
-    for _ in range(1000):
-        print(env.data.site_xpos[env.target_obj_sid].ravel())
-        _, _, done, _ = env.step(env.action_space.sample())
-        if done:
-            env.reset()
-            print('\n')
