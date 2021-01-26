@@ -54,7 +54,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         full_state = self.get_env_full_state()
         self.obs_dim = obs.size
         self.state_dim = state.size
-        self.full_state_dim = full_state.ndim
+        self.full_state_dim = full_state.size
 
         obs_high = np.inf * np.ones(self.obs_dim)
         obs_low = -obs_high
