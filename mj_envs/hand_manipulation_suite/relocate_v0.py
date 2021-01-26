@@ -129,7 +129,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qp = full_states[:, :36]
         obj_pos = full_states[:, 102:105]
         palm_pos = full_states[:, 105:108]
-        target_pos = full_states[:, 108:]
+        target_pos = full_states[:, 108:111]
         return np.concatenate([qp[:, :-6], palm_pos - obj_pos, palm_pos - target_pos, obj_pos - target_pos], axis=-1)
 
     def get_env_state(self):
@@ -147,11 +147,11 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def set_env_state(self, state):
         qp = state[:36]
         qv = state[36:72]
-        self.target_pos = state[108:]
+        self.target_pos = state[108:111]
         self.set_state(qp, qv)
 
     def set_env_full_state(self, full_state):
-        self.set_env_state(full_state[:72])
+        self.set_env_state(full_state)
 
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 90
