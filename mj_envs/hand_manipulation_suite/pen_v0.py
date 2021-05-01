@@ -148,8 +148,9 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         desired_pos = self.data.site_xpos[self.eps_ball_sid].ravel()
         obj_orien = (self.data.site_xpos[self.obj_t_sid] - self.data.site_xpos[self.obj_b_sid]) / self.pen_length
-        desired_orien = self.model.body_quat[self.target_obj_bid].ravel().copy()
-        return np.concatenate([qp, qv, desired_orien, obj_pos, desired_pos, obj_orien])
+        desired_orien4 = self.model.body_quat[self.target_obj_bid].ravel().copy()
+        desired_orien3 = (self.data.site_xpos[self.tar_t_sid] - self.data.site_xpos[self.tar_b_sid])/self.tar_length
+        return np.concatenate([qp, qv, desired_orien4, obj_pos, desired_pos, obj_orien, desired_orien3])
 
     def full_state_to_state(self, full_states):
         assert full_states.ndim == 2
@@ -159,12 +160,12 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         assert full_states.ndim == 2
         qp = full_states[:, :30]
         obj_vel = full_states[:, 54:60]
-        desired_orien = full_states[:, 60:64]
         obj_pos = full_states[:, 64:67]
         desired_pos = full_states[:, 67:70]
         obj_orien = full_states[:, 70:73]
-        return np.concatenate([qp[:, :-6], obj_pos, obj_vel, obj_orien, desired_orien,
-                               obj_pos - desired_pos, obj_orien - desired_orien], axis=-1)
+        desired_orien3 = full_states[:, 73:76]
+        return np.concatenate([qp[:, :-6], obj_pos, obj_vel, obj_orien, desired_orien3,
+                               obj_pos - desired_pos, obj_orien - desired_orien3], axis=-1)
 
     def get_env_state(self):
         qp = self.data.qpos.ravel().copy()
