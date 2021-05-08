@@ -26,7 +26,9 @@ class PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         if use_full_state:
             self._get_obs = self.get_env_full_state
         else:
-            self._get_obs = self.get_obs
+            self._get_obs = self.get_env_state
+
+            # self._get_obs = self.get_obs
         curr_dir = os.path.dirname(os.path.abspath(__file__))
         mujoco_env.MujocoEnv.__init__(self, curr_dir + '/assets/DAPG_pen.xml', 5)
 
