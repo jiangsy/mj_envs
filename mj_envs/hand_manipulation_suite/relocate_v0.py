@@ -120,12 +120,11 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         return self._get_obs()
 
     def get_env_full_state(self):
-        obj_pos = self.model.body_pos[self.obj_bid].ravel()
-        return np.concatenate([self.get_env_state(), obj_pos], axis=-1)
+        return self.get_env_state()
 
     def full_state_to_state(self, full_states):
         assert full_states.ndim == 2
-        return full_states[:, :111]
+        return full_states
 
     def full_state_to_obs(self, full_states):
         assert full_states.ndim == 2
@@ -145,19 +144,20 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
         target_pos = self.target_pos.ravel()
-        return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos])
+        model_obj_pos = self.model.body_pos[self.obj_bid].ravel()
+        return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos, model_obj_pos])
 
     def set_env_state(self, state):
-        raise NotImplemented
-
-    def set_env_full_state(self, full_state):
-        qp = full_state[:36]
-        qv = full_state[36:72]
-        obj_pos = full_state[111: 114]
-        self.target_pos = full_state[108:111]
+        qp = state[:36]
+        qv = state[36:72]
+        obj_pos = state[111: 114]
+        self.target_pos = state[108:111]
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid] = obj_pos.copy()
         self.sim.forward()
+
+    def set_env_full_state(self, full_state):
+        self.set_env_state(full_state)
 
     def mj_viewer_setup(self):
         self.viewer.cam.azimuth = 90

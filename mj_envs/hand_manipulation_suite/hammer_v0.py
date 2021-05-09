@@ -148,7 +148,7 @@ class HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         obj_pos = full_states[:, 75:78]
         obj_rot = full_states[:, 78:81]
         nail_impact = full_states[:, 81:82]
-        return np.concatenate([qpos[:, -6], qvel[:, -6:], palm_pos, obj_pos, obj_rot, target_pos, nail_impact], axis=-1)
+        return np.concatenate([qpos[:, :-6], qvel[:, -6:], palm_pos, obj_pos, obj_rot, target_pos, nail_impact], axis=-1)
 
     def full_state_to_state(self, full_states: np.ndarray):
         assert full_states.ndim == 2
