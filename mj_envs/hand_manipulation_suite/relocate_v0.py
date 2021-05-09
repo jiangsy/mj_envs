@@ -17,7 +17,6 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.target_obj_sid = 0
         self.S_grasp_sid = 0
         self.obj_bid = 0
-        self.target_pos = np.zeros(3)
 
         if use_full_state:
             self._get_obs = self.get_env_full_state
@@ -81,7 +80,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         ob = self._get_obs()
         obj_pos = self.data.body_xpos[self.obj_bid].ravel()
         palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
-        target_pos = self.target_pos.ravel()
+        target_pos = self.data.site_xpos[self.target_obj_sid].ravel()
 
         reward = -0.1 * np.linalg.norm(palm_pos - obj_pos)  # take hand to object
         if obj_pos[2] > 0.04:  # if object off the table
@@ -115,9 +114,9 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid, 0] = self.np_random.uniform(low=-0.15, high=0.15)
         self.model.body_pos[self.obj_bid, 1] = self.np_random.uniform(low=-0.15, high=0.3)
-        self.target_pos[0] = self.np_random.uniform(low=-0.2, high=0.2)
-        self.target_pos[1] = self.np_random.uniform(low=-0.2, high=0.2)
-        self.target_pos[2] = self.np_random.uniform(low=0.15, high=0.35)
+        self.model.site_pos[self.target_obj_sid, 0] = self.np_random.uniform(low=-0.2, high=0.2)
+        self.model.site_pos[self.target_obj_sid, 1] = self.np_random.uniform(low=-0.2, high=0.2)
+        self.model.site_pos[self.target_obj_sid, 2] = self.np_random.uniform(low=0.15, high=0.35)
         self.sim.forward()
         return self._get_obs()
 
@@ -143,19 +142,21 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
         qp = self.data.qpos.ravel().copy()
         qv = self.data.qvel.ravel().copy()
         hand_qpos = qp[:30]
-        obj_pos = self.data.body_xpos[self.obj_bid].ravel()
-        palm_pos = self.data.site_xpos[self.S_grasp_sid].ravel()
-        target_pos = self.target_pos.ravel()
-        model_obj_pos = self.model.body_pos[self.obj_bid].ravel()
-        return np.concatenate([qp, qv, hand_qpos, obj_pos, palm_pos, target_pos, model_obj_pos])
+        obj_xpos = self.data.body_xpos[self.obj_bid].ravel()
+        palm_xpos = self.data.site_xpos[self.S_grasp_sid].ravel()
+        target_xpos = self.data.site_xpos[self.target_obj_sid].ravel()
+        obj_pos = self.model.body_pos[self.obj_bid].ravel()
+        target_pos = self.model.site_pos[self.target_obj_sid].ravel()
+        return np.concatenate([qp, qv, hand_qpos, obj_xpos, palm_xpos, target_xpos, obj_pos, target_pos])
 
     def set_env_state(self, state):
         qp = state[:36]
         qv = state[36:72]
         obj_pos = state[111:114]
-        self.target_pos = state[108:111]
+        target_pos = state[114:117]
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid] = obj_pos.copy()
+        self.model.site_pos[self.target_obj_sid] = target_pos.copy()
         self.sim.forward()
 
     def set_env_full_state(self, full_state):
