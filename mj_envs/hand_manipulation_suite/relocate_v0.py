@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from gym import utils, spaces
 from mjrl.envs import mujoco_env
@@ -12,6 +13,7 @@ DEFAULT_SIZE = 128
 
 class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(self, use_full_state=False):
+        warnings.warn("State space is different from the original state space")
         self.target_obj_sid = 0
         self.S_grasp_sid = 0
         self.obj_bid = 0
@@ -150,7 +152,7 @@ class RelocateEnvV0(mujoco_env.MujocoEnv, utils.EzPickle):
     def set_env_state(self, state):
         qp = state[:36]
         qv = state[36:72]
-        obj_pos = state[111: 114]
+        obj_pos = state[111:114]
         self.target_pos = state[108:111]
         self.set_state(qp, qv)
         self.model.body_pos[self.obj_bid] = obj_pos.copy()
